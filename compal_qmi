@@ -38,20 +38,35 @@ NR_IPV6_STATUS="`rgdb -g /InternetGatewayDevice/WANDevice:2/WANConnectionDevice:
 #apn=$1
 
 # set PCIE Global var
-find_pcie="`find /sys/kernel/debug/mhi_netdev/ -name wwan_*`"
-if [ "$find_pcie" != "" ]; then
-	# this is for pcie 5G nr
-	work_mode="`find /sys/kernel/debug/mhi_netdev/ -name work_mode`"
-	if [ "$work_mode" != "" ];then
-		echo 2 > $work_mode
-	fi
-	IS_PCIE=1
-	DEVICE=/dev/mhi_QMI0
+#find_pcie="`find /sys/kernel/debug/mhi_netdev/ -name wwan_*`"
+#if [ "$find_pcie" != "" ]; then
+#	# this is for pcie 5G nr
+#	work_mode="`find /sys/kernel/debug/mhi_netdev/ -name work_mode`"
+#	if [ "$work_mode" != "" ];then
+#		echo 2 > $work_mode
+#	fi
+#	IS_PCIE=1
+#	DEVICE=/dev/mhi_QMI0
+#fi
+#rgdb -i -s /runtime/diag_device $DEVICE
+
+if [ -e /dev/cdc-wdm0 ]; then
+        echo "Module is USB iface(/dev/cdc-wdm0)"
+        rgdb -i -s /runtime/diag_device /dev/cdc-wdm0
+        IS_PCIE=0
+elif [ -e /dev/mhi_QMI0 ]; then
+        echo "Module is PCIE iface(/dev/mhi_QMI0)"
+        rgdb -i -s /runtime/diag_device /dev/mhi_QMI0
+        IS_PCIE=1
+else
+        echo "unknown iface, Is module insert ? Bye"
+        exit 1
 fi
-rgdb -i -s /runtime/diag_device $DEVICE
+
 
 Get_IP_Info()
 {
+	DEVICE=`rgdb -i -g /runtime/diag_device`
 	cidv4=`rgdb -i -g /runtime/net/CID`
 	NET_INFO=`qmicli --device=${DEVICE} --wds-get-current-settings --client-no-release-cid --client-cid=${cidv4}`
 	IP=`echo "$NET_INFO" | grep "IPv4 address" | awk -F':' '{ print $2 }' | awk '$1=$1'`
@@ -68,6 +83,7 @@ Get_IP_Info()
 Dial_Ipv4_Setup_Env()
 {
 	dprint "Dial_Ipv4_Setup_Env()"
+	DEVICE=`rgdb -i -g /runtime/diag_device`
 	if [ "$IS_PCIE" == "1" ]; then
 		debug_print "[qmicli --device=$DEVICE --wds-bind-mux-data-port="mux-id=129,type=pcie,ep-iface-number=4" --client-no-release-cid]"
 		WDS_BIND_MUX_DATA_PORT1=`qmicli --device=$DEVICE --wds-bind-mux-data-port="mux-id=129,type=pcie,ep-iface-number=4" --client-no-release-cid`
@@ -95,6 +111,7 @@ Diag_Ipv4()
 {	
 	CID1=`rgdb -i -g /runtime/net/CID`
 	apn=`rgdb -i -g /runtime/juniper/apn`
+	DEVICE=`rgdb -i -g /runtime/diag_device`
 	dprint "Diag_Ipv4(): APN=$apn"
 
 	if [ "$apn" = "" ];then
@@ -128,6 +145,7 @@ Diag_Ipv4()
 Dial_Ipv6_Setup_Env()
 {
 	dprint "Dial_Ipv6_Setup_Env()"
+	DEVICE=`rgdb -i -g /runtime/diag_device`
 	if [ "$IS_PCIE" == "1" ]; then
 		debug_print "[qmicli --device=$DEVICE --wds-bind-mux-data-port="mux-id=129,type=pcie,ep-iface-number=4" --client-no-release-cid]"
 		WDS_BIND_MUX_DATA_PORT2=`qmicli --device=$DEVICE --wds-bind-mux-data-port="mux-id=129,type=pcie,ep-iface-number=4" --client-no-release-cid`
@@ -156,6 +174,7 @@ Diag_Ipv6()
 {
 	CID2=`rgdb -i -g /runtime/net/CID2`
 	apn=`rgdb -i -g /runtime/juniper/apn`
+	DEVICE=`rgdb -i -g /runtime/diag_device`
 	dprint "Diag_Ipv6(): APN=$apn"
 
 	if [ "$apn" = "" ];then
@@ -224,6 +243,8 @@ Ipv6_setup()
 		#echo new_pd_prefix= $PREFIX_VALUE > /var/run/dhcp6cgotreply
 		#echo new_domain_name_servers= $DNSv6 $DNSv6_1 >> /var/run/dhcp6cgotreply
 		#rgdb -i -s /runtime/ipv6/radvd/radvdoninf "br0"
+
+		dprint "call wanup.sh"
 		/etc/templates/wan/wanup.sh wwan0 "InternetGatewayDevice.WANDevice.2.WANConnectionDevice.1.WANIPConnection.1."
 	fi
 }
@@ -235,6 +256,7 @@ Cre_Qmi_Stop()
 	CID2=`rgdb -i -g /runtime/net/CID2`
 	PDH=`rgdb -i -g /runtime/PDH`
 	PDHv6=`rgdb -i -g /runtime/PDHv6`
+	DEVICE=`rgdb -i -g /runtime/diag_device`
 
 	#ipv4
 	dprint "create IPV4"
@@ -270,6 +292,7 @@ Diag_All()
 	cidv6=`rgdb -i -g /runtime/net/CID2`
 	pdhv4=`rgdb -i -g /runtime/PDH`
 	pdhv6=`rgdb -i -g /runtime/PDHv6`
+	DEVICE=`rgdb -i -g /runtime/diag_device`
 
 	if [ "${cidv6}" != "" -a "${pdhv6}" != "" ]; then
 		rgdb -i -s /runtime/step7 1
@@ -398,11 +421,6 @@ Juniper_wan_setup()
 	
 	dprint "add br0 alias ${IPV4_GW}/${IPV4_MASK}"
 	ip addr add ${IPV4_GW}/${IPV4_MASK} dev br0
-
-        dprint "ping test to google by ipv6"
-        ping -6 -c 5 www.google.com
-
-        #show ipv6 info : ip -6 route
 }
 
 Update_conn_status()
@@ -411,6 +429,8 @@ Update_conn_status()
 	cidv6=`rgdb -i -g /runtime/net/CID2`
 	pdhv4=`rgdb -i -g /runtime/PDH`
 	pdhv6=`rgdb -i -g /runtime/PDHv6`
+	DEVICE=`rgdb -i -g /runtime/diag_device`
+
 	if [ "${cidv4}" != "" -a "${cidv6}" != "" -a "${pdhv4}" != "" -a "${pdhv6}" != "" ]; then
 		echo -e "\033[31mcidv4[$cidv4] pdhv4[$pdhv4] cidv6[$cidv6] pdhv6[$pdhv6] ALL GET\033[0m"
 		qmicli --device=$DEVICE --wds-get-current-settings=${pdhv4} --client-no-release-cid --client-cid=${cidv4} > /tmp/ipv4 2>&1
@@ -537,6 +557,16 @@ disconnect)
         fi
 	dprint "Send CONN_DISCONNECTED message to ADPMGR"
         sysmgr_cmd  message ADPMGR CONN_DISCONNECTED
+
+	dprint "clean webgui node value"
+	rgdb -s /InternetGatewayDevice/DeviceInfo/IP ""
+	rgdb -s /InternetGatewayDevice/DeviceInfo/Gateway ""
+	rgdb -s /InternetGatewayDevice/DeviceInfo/Mask ""
+	rgdb -s /InternetGatewayDevice/DeviceInfo/DNS ""
+	rgdb -s /InternetGatewayDevice/DeviceInfo/IP_v6 ""
+	rgdb -s /InternetGatewayDevice/DeviceInfo/Mask_v6 ""
+	rgdb -s /InternetGatewayDevice/DeviceInfo/DNS_v6 ""
+	rgdb -s /InternetGatewayDevice/DeviceInfo/Gateway_v6 ""
 	;;
 connect)
 #	qmi_ongoing=`rgdb -i -g /runtime/qmi_is_ongoing`
@@ -549,7 +579,7 @@ connect)
                 rgdb -i -s /runtime/juniper/apn $2
         elif [ "$2" = "" ]; then
                 echo "APN is empty, Bye"
-                exit 1
+		usage
         fi
 		rgdb -s /InternetGatewayDevice/WANDevice.2.WANConnectionDevice.1.WANIPConnection.1.ConnectionStatus Connecting
 		rgdb -s "$LTEWANDev"/WANIPConnection:1/"$X_VENDOR"IPv6ConnStatus "Connecting"
@@ -557,6 +587,8 @@ connect)
 		sh /var/qmi_stop_cmd.sh
 		Diag_All 
 		Update_conn_status
+	Ipv6_setup
+
 #	fi
 	;;
 esac
