@@ -18,8 +18,6 @@ dprint()
 # Global var default values
 # default values is for 5G USB module
 FAIL_COUNT=0
-IS_PCIE=0
-DEVICE=/dev/cdc-wdm0
 STEP1=
 STEP2=
 STEP3=
@@ -28,27 +26,10 @@ STEP5=
 STEP6=
 STEP7="`rgdb -i -g /runtime/step7`"
 LTEWANDev="/InternetGatewayDevice/WANDevice:2/WANConnectionDevice:1"
-RADVDMng="InternetGatewayDevice/LANDevice:1/"$X_VENDOR"IPv6LANHostConfigManagement/RadVDConfigManagement"
-
+RADVDMng="/InternetGatewayDevice/LANDevice:1/"$X_VENDOR"IPv6LANHostConfigManagement/RadVDConfigManagement"
 xmlpath="/InternetGatewayDevice.WANDevice.2.WANConnectionDevice.1.WANIPConnection.1."
 WANIPConnection="/InternetGatewayDevice/WANDevice:2/WANConnectionDevice:1/WANIPConnection:1/"
-
 NR_IPV6_STATUS="`rgdb -g /InternetGatewayDevice/WANDevice:2/WANConnectionDevice:1/WANIPConnection:1/${X_VENDOR}IPv6Enabled`"
-
-#apn=$1
-
-# set PCIE Global var
-#find_pcie="`find /sys/kernel/debug/mhi_netdev/ -name wwan_*`"
-#if [ "$find_pcie" != "" ]; then
-#	# this is for pcie 5G nr
-#	work_mode="`find /sys/kernel/debug/mhi_netdev/ -name work_mode`"
-#	if [ "$work_mode" != "" ];then
-#		echo 2 > $work_mode
-#	fi
-#	IS_PCIE=1
-#	DEVICE=/dev/mhi_QMI0
-#fi
-#rgdb -i -s /runtime/diag_device $DEVICE
 
 if [ -e /dev/cdc-wdm0 ]; then
         echo "Module is USB iface(/dev/cdc-wdm0)"
@@ -287,7 +268,6 @@ Diag_All()
 {		
 	apn=`rgdb -i -g /runtime/juniper/apn`
 	dprint "Diag_All(APN=$apn)"
-#	rgdb -i -s /runtime/qmi_is_ongoing "1"
 	cidv4=`rgdb -i -g /runtime/net/CID`
 	cidv6=`rgdb -i -g /runtime/net/CID2`
 	pdhv4=`rgdb -i -g /runtime/PDH`
@@ -483,6 +463,7 @@ Update_conn_status()
 		dprint "Send CONN_CONNECTED message to ADPMGR"
 		sysmgr_cmd  message ADPMGR CONN_CONNECTED
 		rgdb -s /InternetGatewayDevice/WANDevice.2.WANConnectionDevice.1.WANIPConnection.1.ConnectionStatus Connected
+		rgdb -i -s /runtime/juniper/setupipv6 1
 		else
 		echo -e "\033[31mCIDv4/CIDv6/PDH/PDHv6 ALL GET but query IP by Qualcomm CMD FAIL\033[0m"
 		echo -e "\033[31mCARRIER=`rgdb -i -g /runtime/lte/carrier_name`\033[0m"
@@ -493,12 +474,14 @@ Update_conn_status()
 		dprint "Send CONN_DISCONNECTED message to ADPMGR"
 		sysmgr_cmd  message ADPMGR CONN_DISCONNECTED
 		rgdb -s /InternetGatewayDevice/WANDevice.2.WANConnectionDevice.1.WANIPConnection.1.ConnectionStatus Disconnected
+		rgdb -i -s /runtime/juniper/setupipv6 0
 		fi
 	else
 		echo -e "\033[31mcidv4[$cidv4] pdhv4[$pdhv4] cidv6[$cidv6] pdhv6[$pdhv6] NOT ALL GET, DIAL AGAIN\033[0m"
 		dprint "Send CONN_DISCONNECTED message to ADPMGR"
 		sysmgr_cmd  message ADPMGR CONN_DISCONNECTED
 		rgdb -s /InternetGatewayDevice/WANDevice.2.WANConnectionDevice.1.WANIPConnection.1.ConnectionStatus Disconnected
+		rgdb -i -s /runtime/juniper/setupipv6 0
 	fi
 }
 
@@ -569,11 +552,6 @@ disconnect)
 	rgdb -s /InternetGatewayDevice/DeviceInfo/Gateway_v6 ""
 	;;
 connect)
-#	qmi_ongoing=`rgdb -i -g /runtime/qmi_is_ongoing`
-#	if [ "$qmi_ongoing" = "1" ];then
-#		echo "compal_qmi is ongoing!!"
-#	else
-
         if [ "$2" != "" ]; then
                 dprint "Your input APN_NAME = $2, set /runtime/juniper/apn = $2"
                 rgdb -i -s /runtime/juniper/apn $2
@@ -581,14 +559,15 @@ connect)
                 echo "APN is empty, Bye"
 		usage
         fi
+		rgdb -i -s /runtime/juniper/setupipv6 0
 		rgdb -s /InternetGatewayDevice/WANDevice.2.WANConnectionDevice.1.WANIPConnection.1.ConnectionStatus Connecting
 		rgdb -s "$LTEWANDev"/WANIPConnection:1/"$X_VENDOR"IPv6ConnStatus "Connecting"
 		Cre_Qmi_Stop
 		sh /var/qmi_stop_cmd.sh
 		Diag_All 
 		Update_conn_status
-	Ipv6_setup
-
-#	fi
+		if [ "`rgdb -i -g /runtime/juniper/setupipv6`" = "1" ];then
+			Ipv6_setup
+		fi
 	;;
 esac
