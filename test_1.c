@@ -29,8 +29,44 @@ int array[]={1, 4, 22, 14, 54};
 bubble_sort(array, sizeof(array)/sizeof(int));
 ----------------------------------------------------
 3
+//1+2+...n
+int recursive_1(int n)
+{
+	if(n==1)
+		return 1;
+	else
+		return (n + recursive_1(n-1));
+}
+
+//1*2*3....*n
+recursive_2()
+{
+	if(n==1)
+		return 1;
+	else
+		return (n * recursive_2(n-1));
+}
+
+rerecursive_1(5);
+rerecursive_2(5);
 ----------------------------------------------------
 4
+void modify_str(char s[], int n, char c)
+{
+	int i = 0;
+	char *p = s;
+	while(*p!='\0')
+	{
+		if(i>n){
+			*p = c;
+		}
+		p++;
+		i++;
+	}
+}
+
+char buf[]="abcd1234";
+modify_str(buf,3 ,'a');
 ----------------------------------------------------
 5
 ----------------------------------------------------
