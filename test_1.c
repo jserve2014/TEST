@@ -81,8 +81,29 @@ modify_str(buf,3 ,'a');
 10
 ----------------------------------------------------
 11
+int mystrlen(const char *s)
+{
+	char *start_addr=s;
+	char *p=s;
+	while(*p++!='\0');
+	return (p-start_addr);
+}
+
+mystrlen("abcdef123");
 ----------------------------------------------------
 12
+mystrcpy(char dest[], const char *src)
+{
+	int i = 0;
+	char *p=src;
+	while(*p!='\0')
+	{
+		dest[i++]=*p++;
+	}
+}
+
+char s[100]={0};
+mystrcpy(s, "abcdefg123");
 ----------------------------------------------------
 13
 ----------------------------------------------------
