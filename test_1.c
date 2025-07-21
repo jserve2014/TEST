@@ -95,6 +95,16 @@ reverse_string(s);
 7
 ----------------------------------------------------
 8
+//123 -> 321
+revert_integer(int a)
+{
+	int res=0;
+	do{
+		res = res*10 + (a%10);
+	}while(a/=10);
+}
+
+revert_integer(123);
 ----------------------------------------------------
 9
 find_max(int array[], int len)
