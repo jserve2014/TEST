@@ -142,6 +142,18 @@ mystrcpy(s, "abcdefg123");
 13
 ----------------------------------------------------
 14
+void *memset(void *buf, int c, int len)
+{
+	char *p=(cahr *)buf;
+	while(len--)
+	{
+		*p++ = (char)c;
+	}
+	return buf;
+}
+
+char buf[100];
+memset(buf, 0, sizeof(buf)/sizeof(char));
 ----------------------------------------------------
 15
 ----------------------------------------------------
