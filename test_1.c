@@ -223,6 +223,26 @@ detect(char *s)
 detect("abcd1233*-");
 ----------------------------------------------------
 16
+memcpy(void *dest, const void *src, int n)
+{
+	(char *)pto=(char *)dest;
+	(char *)pfrom=(char *)src;
+	
+	//pto		pto+n		pfrom
+	//pfrom		pfrom+n		pto
+	if((pto+n < pfrom) || (pfrom+n < pto))
+	{
+		while(n--)
+		{
+			*pto++ = *pfrom++;
+		}
+	}
+}
+
+
+char dest[]={0};
+char *src="adddd"
+memcpy(dest, src, strlen(src));
 ----------------------------------------------------
 17
 //-1234 -> "4321-" -> "-1234"
