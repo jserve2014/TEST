@@ -136,6 +136,21 @@ int arr[]={1, 3, 5, 2, 6}
 find_max(arr, sizeof(arr)/sizeof(int));
 ----------------------------------------------------
 10
+strcat(char *dest, const char *src)
+{
+	while(*dest!='\0')
+	{
+		dest++;
+	}
+
+	while(*src!='\0')
+	{
+		*dest++ = *src++;
+	}
+}
+
+char s[]="1234"
+strcat(s, "abcdef");
 ----------------------------------------------------
 11
 int mystrlen(const char *s)
