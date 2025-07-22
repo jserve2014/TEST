@@ -93,6 +93,19 @@ char s[]="abcdef1234";
 reverse_string(s);
 ----------------------------------------------------
 7
+reverse_integer_array(int arr[], int n)
+{
+	int i, j, temp;
+	for(i=0,j<n-1;i<j;i++,j--)
+	{
+		temp = arr[i];
+		arr[i]=arr[j];
+		arr[j]=temp;
+	}
+}
+
+int a[]={1, 3, 5, 7, 2};
+reverse_integer_array(a, sizeof(a)/sizeof(int));
 ----------------------------------------------------
 8
 //123 -> 321
