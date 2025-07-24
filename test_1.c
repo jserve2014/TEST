@@ -316,3 +316,31 @@ char *convert(char *s)
 convert("Abcdef");
 ----------------------------------------------------
 20
+string_max_freq(const char *s)
+{
+	char freq[256]={0};
+
+	//count times
+	while(*s!='\0')
+	{
+		freq[*s]++;
+		s++;
+	}
+
+	int max=0;
+	int max_ch_index=0;
+
+	for(i=0;i<256;i++)
+	{
+		if(freq[i]>max){
+			max = freq[i];
+			max_ch_index=i;
+		}
+	}
+
+	printf("This max happen char = %c, has %d times\n", max_ch_index, max);
+}
+
+
+char s[]="abcde123abcde12345";
+string_max_freq(s);
